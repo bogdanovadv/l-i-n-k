@@ -1,2 +1,2 @@
-web: gunicorn runp-heroku:app
+web: gunicorn
 init: python app.py
