@@ -14,3 +14,4 @@ PyJWT==2.1.0
 PyMySQL==1.0.2
 SQLAlchemy==1.4.15
 Werkzeug==2.0.0
+gunicorn==20.1.0
