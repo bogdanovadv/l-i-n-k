@@ -15,7 +15,7 @@ app.config.from_object(Config)
 
 client = app.test_client()
 
-engine = create_engine('postgresql://ylgjqbynqxxspx:4902ae077dfb2377a8b3afeced3c82e20bd2e6bf05f8cda386d52295c5442044@ec2-52-17-1-206.eu-west-1.compute.amazonaws.com:5432/d7juj838rq4vv4')
+engine = create_engine(Config.base)
 
 session = scoped_session(sessionmaker(
     autocommit=False, autoflush=False, bind=engine))
