@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
-import pymysql
 from config import Config
 from flask_cors import CORS
 import hashlib
@@ -16,7 +15,7 @@ app.config.from_object(Config)
 
 client = app.test_client()
 
-engine = create_engine(f'mysql+pymysql://{Config.db_user}:{Config.db_pass}@{Config.db_host}/{Config.db_name}')
+engine = create_engine('postgresql://ylgjqbynqxxspx:4902ae077dfb2377a8b3afeced3c82e20bd2e6bf05f8cda386d52295c5442044@ec2-52-17-1-206.eu-west-1.compute.amazonaws.com:5432/d7juj838rq4vv4')
 
 session = scoped_session(sessionmaker(
     autocommit=False, autoflush=False, bind=engine))
@@ -43,14 +42,14 @@ Base.metadata.create_all(bind=engine, checkfirst=True)
 
 @app.route('/register', methods=['POST'])
 def register():
-    print('sdasd')
     params = request.json
-    user = User(**params)
-    session.add(user)
-    session.commit()
-    token = user.get_token()
-    print('qqq', user.name)
-    return {'access_token': token}
+    if params['email']:
+        user = User(**params)
+        session.add(user)
+        session.commit()
+        token = user.get_token()
+        return {'access_token': token}
+    return {"message": "Не заполнены необходимые поля"}, 400
 
 
 @app.route('/login', methods=['POST'])
@@ -76,6 +75,7 @@ def add_original_link(original_link):
 def add_link():
     user_id = get_jwt_identity()
     response_data = request.json
+    print(response_data)
     original_link = add_original_link(response_data["original"])
     exist = Link.query.filter(Link.original_id == original_link.id).first()
     if not exist:
@@ -145,6 +145,24 @@ def update_link(link_id):
     return serialized
 
 
+@app.route('/links/<int:link_id>', methods=['GET'])
+@jwt_required()
+def get_link(link_id):
+    user_id = get_jwt_identity()
+    link = Link.query.filter(Link.user_id == user_id, Link.id == link_id).first()
+    data = {
+        'id': link.id,
+        'original': link.original.link,
+        'short': f"{Config.api_url}/{link.short_link}",
+        'counter': link.counter,
+        'type_id': link.type_id
+    }
+    if link.friendly_link:
+        friendly_link = f"{Config.api_url}/{link.friendly_link}"
+        data['friendly'] = friendly_link
+    return jsonify(data)
+
+
 @app.route('/links/<int:link_id>', methods=['DELETE'])
 @jwt_required()
 def delete_link(link_id):
@@ -179,9 +197,9 @@ def url_redirect(short_uri):
                 session.commit()
                 return redirect(link.original.link)
             else:
-                return {'message': 'Недостаточно прав'}, 400
+                return {'message': 'Недостаточно прав'}, 403
     else:
-        return {'message': 'Ссылка недействительна'}, 400
+        return {'message': 'Ссылка недействительна'}, 404
 
 
 @jwt_required()
