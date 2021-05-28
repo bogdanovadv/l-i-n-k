@@ -2,13 +2,10 @@ class Config:
     # Адрес API
     api_host = 'https://l-i-n-k.herokuapp.com/'
     api_port = 5000
-    api_url = f"http://{api_host}:{api_port}"
+    api_url = 'https://l-i-n-k.herokuapp.com/'
 
     # Подключение к БД
-    db_host = "localhost"
-    db_name = "orm_test"
-    db_user = "root"
-    db_pass = ""
+    base = 'postgresql://ylgjqbynqxxspx:4902ae077dfb2377a8b3afeced3c82e20bd2e6bf05f8cda386d52295c5442044@ec2-52-17-1-206.eu-west-1.compute.amazonaws.com:5432/d7juj838rq4vv4'
 
     # Соль для генерации хэша
     SECRET_KEY = '2$ViplzPm935vjRFCyPmdw$nxEHZPlwdmezZgQxYyRegVym6AJDauWC365NTY'
