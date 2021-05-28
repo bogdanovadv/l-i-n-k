@@ -71,7 +71,7 @@ def add_original_link(original_link):
     return links
 
 @app.route('/add-link', methods=['POST'])
-@jwt_required()
+@jwt_required((optional=True))
 def add_link():
     user_id = get_jwt_identity()
     response_data = request.json
