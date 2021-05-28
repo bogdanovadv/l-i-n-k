@@ -59,7 +59,7 @@ def login():
     token = user.get_token()
     res = make_response('')
     res.set_cookie('access_token', token)
-    res.set_cookie('name': user.name)
+    res.set_cookie('name', user.name)
     return {'access_token': token}
 
 
