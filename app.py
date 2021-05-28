@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, make_response
 import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
@@ -57,7 +57,10 @@ def login():
     params = request.json
     user = User.authenticate(**params)
     token = user.get_token()
-    return {'access_token': token, 'name': user.name}
+    res = make_response('')
+    res.set_cookie('access_token', token)
+    res.set_cookie('name': user.name)
+    return {'access_token': token}
 
 
 def add_original_link(original_link):
@@ -187,12 +190,12 @@ def url_redirect(short_uri):
             session.commit()
             return redirect(link.original.link)
         elif link.type_id == 2:
-            if check_autentificate():
+            if check_autentificate() or request.cookies.get('token'):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
         else:
-            if check_private_link(link.user_id):
+            if check_private_link(link.user_id) or request.cookies.get('token'):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
