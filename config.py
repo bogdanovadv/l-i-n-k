@@ -1,6 +1,6 @@
 class Config:
     # Адрес API
-    api_host = '10.170.1.120'
+    api_host = 'https://l-i-n-k.herokuapp.com/'
     api_port = 5000
     api_url = f"http://{api_host}:{api_port}"
 
