@@ -15,5 +15,5 @@ class Config:
     salt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTYyMTQxMjA2MiwianRpIjoiMzBjOTc0YTEtNmQ4NS00ZDZjLWEwOTItMjYxODAzNTFmYmY0IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6NCwibmJmIjoxNjIxNDEyMDYyLCJleHAiOjE2MjM0ODU2NjJ9.k-nY9DmNeE2W3paQCiOxT6YKbcEZo5breesRB1ZOGmk"
 
     # Разрешенные адреса для подключения к API
-    CORS_ALLOWED_ORIGINS = ['http://10.170.1.120:8080']
+    CORS_ALLOWED_ORIGINS = ['http://87.249.215.73']
 	
