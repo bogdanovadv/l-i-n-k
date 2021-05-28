@@ -195,7 +195,7 @@ def url_redirect(short_uri):
                 session.commit()
                 return redirect(link.original.link)
         else:
-            if check_private_link(link.user_id) or request.cookies.get('token'):
+            if check_private_link(link.user_id) or (request.cookies.get('token') and request.cookies.get('user_id')==link.user_id):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
