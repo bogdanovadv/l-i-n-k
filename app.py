@@ -12,6 +12,8 @@ import base64
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 
 client = app.test_client()
 
@@ -58,8 +60,6 @@ def login():
     user = User.authenticate(**params)
     token = user.get_token()
     res = make_response('')
-    res.set_cookie('access_token', token)
-    res.set_cookie('name', user.name)
     return {'access_token': token}
 
 
@@ -190,12 +190,12 @@ def url_redirect(short_uri):
             session.commit()
             return redirect(link.original.link)
         elif link.type_id == 2:
-            if check_autentificate() or request.cookies.get('token'):
+            if check_autentificate():
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
         else:
-            if check_private_link(link.user_id) or (request.cookies.get('token') and request.cookies.get('user_id')==link.user_id):
+            if check_private_link(link.user_id):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
