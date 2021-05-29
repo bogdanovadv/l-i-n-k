@@ -3,7 +3,7 @@ import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, set_access_cookies
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, set_access_cookies, jwt_refresh_token_required, jwt_optional, fresh_jwt_required, get_raw_jwt, create_access_token, create_refresh_token, set_access_cookies, set_refresh_cookies, unset_jwt_cookies,unset_access_cookies
 from config import Config
 from flask_cors import CORS
 import hashlib
