@@ -3,16 +3,7 @@ import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import get_jwt
-from flask_jwt_extended import get_jwt_identity
-from flask_jwt_extended import jwt_required
-from flask_jwt_extended import JWTManager
-from flask_jwt_extended import set_access_cookies
-from flask_jwt_extended import unset_jwt_cookies
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from config import Config
 from flask_cors import CORS
 import hashlib
@@ -21,9 +12,6 @@ import base64
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config['JWT_TOKEN_LOCATION'] = ['cookies']
-app.config['JWT_COOKIE_CSRF_PROTECT'] = True
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
 client = app.test_client()
 
@@ -41,7 +29,7 @@ from models import *
 
 jwt = JWTManager(app)
 
-cors = CORS(app, supports_credentials=True, resources={
+cors = CORS(app, resources={
     r"/*": {"origins": Config.CORS_ALLOWED_ORIGINS}
 })
 
@@ -52,22 +40,6 @@ cors = CORS(app, supports_credentials=True, resources={
 # Раскоментируй строчку ниже, если нужно первоначальное создание таблиц
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
-
-@app.after_request
-def refresh_expiring_jwts(response):
-    try:
-        exp_timestamp = get_jwt()["exp"]
-        now = datetime.now(timezone.utc)
-        target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
-        if target_timestamp > exp_timestamp:
-            access_token = create_access_token(identity=get_jwt_identity())
-            set_access_cookies(response, access_token)
-        return response
-    except (RuntimeError, KeyError):
-        # Case where there is not a valid JWT. Just return the original respone
-        return response
-
-
 @app.route('/register', methods=['POST'])
 def register():
     params = request.json
@@ -75,10 +47,8 @@ def register():
         user = User(**params)
         session.add(user)
         session.commit()
-        response = jsonify({"msg": "login successful"})
-        access_token = create_access_token(identity="example_user")
-        set_access_cookies(response, access_token)
-        return response
+        token = user.get_token()
+        return {'access_token': token}
     return {"message": "Не заполнены необходимые поля"}, 400
 
 
@@ -86,10 +56,11 @@ def register():
 def login():
     params = request.json
     user = User.authenticate(**params)
-    response = jsonify({"msg": "login successful"})
-    access_token = create_access_token(identity="example_user")
-    set_access_cookies(response, access_token)
-    return response
+    token = user.get_token()
+    res = make_response('')
+    res.set_cookie('access_token', token)
+    res.set_cookie('name', user.name)
+    return {'access_token': token}
 
 
 def add_original_link(original_link):
@@ -219,12 +190,12 @@ def url_redirect(short_uri):
             session.commit()
             return redirect(link.original.link)
         elif link.type_id == 2:
-            if check_autentificate():
+            if check_autentificate() or request.cookies.get('token'):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
         else:
-            if check_private_link(link.user_id):
+            if check_private_link(link.user_id) or (request.cookies.get('token') and request.cookies.get('user_id')==link.user_id):
                 link.counter += 1
                 session.commit()
                 return redirect(link.original.link)
