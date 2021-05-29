@@ -12,6 +12,7 @@ import base64
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['BASE_URL'] = Config.api_url
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 app.config['JWT_CSRF_CHECK_FORM'] = True
@@ -51,6 +52,8 @@ def register():
         session.add(user)
         session.commit()
         token = user.get_token()
+        resp = make_response()
+        set_access_cookies(resp, access_token)
         return {'access_token': token}
     return {"message": "Не заполнены необходимые поля"}, 400
 
