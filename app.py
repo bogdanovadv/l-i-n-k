@@ -42,7 +42,7 @@ from models import *
 jwt = JWTManager(app)
 
 cors = CORS(app, resources={
-    r"/*": {"origins": Config.CORS_ALLOWED_ORIGINS}
+    r"/*": {"origins": Config.CORS_ALLOWED_ORIGINS, "Credentias", true}
 })
 
 
