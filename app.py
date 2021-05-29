@@ -52,7 +52,7 @@ def register():
         session.add(user)
         session.commit()
         token = user.get_token()
-        resp = make_response()
+        resp = make_response('')
         set_access_cookies(resp, access_token)
         return {'access_token': token}
     return {"message": "Не заполнены необходимые поля"}, 400
@@ -63,7 +63,7 @@ def login():
     params = request.json
     user = User.authenticate(**params)
     token = user.get_token()
-    resp = make_response(redirect(url, 302))
+    resp = make_response('')
     set_access_cookies(resp, access_token)
     return {'access_token': token}
 
