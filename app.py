@@ -3,7 +3,16 @@ import sqlalchemy as db
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, set_access_cookies, jwt_refresh_token_required, jwt_optional, fresh_jwt_required, get_raw_jwt, create_access_token, create_refresh_token, set_access_cookies, set_refresh_cookies, unset_jwt_cookies,unset_access_cookies
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
+from flask_jwt_extended import set_access_cookies
+from flask_jwt_extended import unset_jwt_cookies
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from config import Config
 from flask_cors import CORS
 import hashlib
@@ -12,10 +21,9 @@ import base64
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config['BASE_URL'] = Config.api_url
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 app.config['JWT_COOKIE_CSRF_PROTECT'] = True
-app.config['JWT_CSRF_CHECK_FORM'] = True
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
 client = app.test_client()
 
@@ -45,47 +53,20 @@ cors = CORS(app, resources={
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
 
-def assign_access_refresh_tokens(user_id, url):
-    access_token = create_access_token(identity=str(user_id))
-    refresh_token = create_refresh_token(identity=str(user_id))
-    resp = make_response(redirect(url, 302))
-    set_access_cookies(resp, access_token)
-    set_refresh_cookies(resp, refresh_token)
-    return resp
+@app.after_request
+def refresh_expiring_jwts(response):
+    try:
+        exp_timestamp = get_jwt()["exp"]
+        now = datetime.now(timezone.utc)
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
+        if target_timestamp > exp_timestamp:
+            access_token = create_access_token(identity=get_jwt_identity())
+            set_access_cookies(response, access_token)
+        return response
+    except (RuntimeError, KeyError):
+        # Case where there is not a valid JWT. Just return the original respone
+        return response
 
-def unset_jwt():
-    resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
-    unset_jwt_cookies(resp)
-    return resp
-
-@jwt.unauthorized_loader
-def unauthorized_callback(callback):
-    # No auth header
-    return redirect(app.config['BASE_URL'] + '/signup', 302)
-
-@jwt.invalid_token_loader
-def invalid_token_callback(callback):
-    # Invalid Fresh/Non-Fresh Access token in auth header
-    resp = make_response(redirect(app.config['BASE_URL'] + '/signup'))
-    unset_jwt_cookies(resp)
-    return resp, 302
-
-@jwt.expired_token_loader
-def expired_token_callback(callback):
-    # Expired auth header
-    resp = make_response(redirect(app.config['BASE_URL'] + '/token/refresh'))
-    unset_access_cookies(resp)
-    return resp, 302
-
-@app.route('/token/refresh', methods=['GET'])
-@jwt_refresh_token_required
-def refresh():
-    # Refreshing expired Access token
-    user_id = get_jwt_identity()
-    access_token = create_access_token(identity=str(user_id))
-    resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
-    set_access_cookies(resp, access_token)
-    return resp
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -94,7 +75,10 @@ def register():
         user = User(**params)
         session.add(user)
         session.commit()
-        return assign_access_refresh_tokens(username , app.config['BASE_URL'] + '/')
+        response = jsonify({"msg": "login successful"})
+        access_token = create_access_token(identity="example_user")
+        set_access_cookies(response, access_token)
+        return response
     return {"message": "Не заполнены необходимые поля"}, 400
 
 
@@ -102,8 +86,10 @@ def register():
 def login():
     params = request.json
     user = User.authenticate(**params)
-    token = user.get_token()
-    return assign_access_refresh_tokens(username , app.config['BASE_URL'] + '/')
+    response = jsonify({"msg": "login successful"})
+    access_token = create_access_token(identity="example_user")
+    set_access_cookies(response, access_token)
+    return response
 
 
 def add_original_link(original_link):
@@ -117,7 +103,7 @@ def add_original_link(original_link):
     return links
 
 @app.route('/add-link', methods=['POST'])
-@jwt_optional
+@jwt_required(optional=True)
 def add_link():
     user_id = get_jwt_identity()
     response_data = request.json
