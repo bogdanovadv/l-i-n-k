@@ -44,6 +44,49 @@ cors = CORS(app, resources={
 # Раскоментируй строчку ниже, если нужно первоначальное создание таблиц
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
+
+def assign_access_refresh_tokens(user_id, url):
+    access_token = create_access_token(identity=str(user_id))
+    refresh_token = create_refresh_token(identity=str(user_id))
+    resp = make_response(redirect(url, 302))
+    set_access_cookies(resp, access_token)
+    set_refresh_cookies(resp, refresh_token)
+    return resp
+
+def unset_jwt():
+    resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
+    unset_jwt_cookies(resp)
+    return resp
+
+@jwt.unauthorized_loader
+def unauthorized_callback(callback):
+    # No auth header
+    return redirect(app.config['BASE_URL'] + '/signup', 302)
+
+@jwt.invalid_token_loader
+def invalid_token_callback(callback):
+    # Invalid Fresh/Non-Fresh Access token in auth header
+    resp = make_response(redirect(app.config['BASE_URL'] + '/signup'))
+    unset_jwt_cookies(resp)
+    return resp, 302
+
+@jwt.expired_token_loader
+def expired_token_callback(callback):
+    # Expired auth header
+    resp = make_response(redirect(app.config['BASE_URL'] + '/token/refresh'))
+    unset_access_cookies(resp)
+    return resp, 302
+
+@app.route('/token/refresh', methods=['GET'])
+@jwt_refresh_token_required
+def refresh():
+    # Refreshing expired Access token
+    user_id = get_jwt_identity()
+    access_token = create_access_token(identity=str(user_id))
+    resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
+    set_access_cookies(resp, access_token)
+    return resp
+
 @app.route('/register', methods=['POST'])
 def register():
     params = request.json
@@ -51,10 +94,7 @@ def register():
         user = User(**params)
         session.add(user)
         session.commit()
-        token = user.get_token()
-        resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
-        set_access_cookies(resp, token)
-        return {'access_token': token}
+        return assign_access_refresh_tokens(username , app.config['BASE_URL'] + '/')
     return {"message": "Не заполнены необходимые поля"}, 400
 
 
@@ -63,9 +103,7 @@ def login():
     params = request.json
     user = User.authenticate(**params)
     token = user.get_token()
-    resp = make_response(redirect(app.config['BASE_URL'] + '/', 302))
-    set_access_cookies(resp, token)
-    return {'access_token': token}
+    return assign_access_refresh_tokens(username , app.config['BASE_URL'] + '/')
 
 
 def add_original_link(original_link):
@@ -79,7 +117,7 @@ def add_original_link(original_link):
     return links
 
 @app.route('/add-link', methods=['POST'])
-@jwt_required(optional=True)
+@jwt_optional
 def add_link():
     user_id = get_jwt_identity()
     response_data = request.json
