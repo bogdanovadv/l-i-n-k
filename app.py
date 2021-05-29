@@ -63,7 +63,8 @@ def login():
     params = request.json
     user = User.authenticate(**params)
     token = user.get_token()
-    res = make_response('')
+    resp = make_response(redirect(url, 302))
+    set_access_cookies(resp, access_token)
     return {'access_token': token}
 
 
